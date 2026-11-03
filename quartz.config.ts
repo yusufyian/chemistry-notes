@@ -16,7 +16,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "zh-CN",
-    baseUrl: "yusufyian.github.io",
+    baseUrl: "yusufyian.github.io/chemistry-notes",
     ignorePatterns: ["private", "templates", ".obsidian", ".trash", "attachments/raw"],
     defaultDateType: "modified",
     theme: {
