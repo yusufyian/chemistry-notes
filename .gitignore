@@ -1,0 +1,22 @@
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 依赖与构建产物
+node_modules
+public
+prof
+tsconfig.tsbuildinfo
+.quartz-cache
+
+# 编辑器 / 工具状态
+.obsidian
+.vscode
+.replit
+replit.nix
+
+# 私密内容：不进 Git，也不发布到站点
+private/
+content/private/
+templates/
+content/templates/
