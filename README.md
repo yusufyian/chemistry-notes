@@ -132,23 +132,51 @@ draft: true
 - 任何敏感数据（密码、密钥、个人信息）不要写入本仓库
 - 一旦推送过密钥，立即在 GitHub 撤销该密钥——删除文件并提交**不能**清除历史记录
 
-## 已知环境问题
+## 已知环境问题：git 传输层被代理阻断
 
-本机 git clone GitHub 仓库时出现 `HTTP2 framing layer` / `CONNECT tunnel failed` 错误，
-推测为代理对 git 传输层（smart HTTP）干扰所致。绕行方式：
+本机 git clone / push GitHub 仓库时出现 `HTTP2 framing layer` / `CONNECT tunnel failed` 错误。
+根因是环境代理（`127.0.0.1:50533`）对 git 的 smart-HTTP 传输层不友好，
+但 **GitHub REST API 走同一代理却完全正常** —— 两者协议不同。
+
+### 已内置的解决方案
+
+`sync.sh` 内置了自动降级：git 推送重试 3 次仍失败时，自动切换到 API 通道。
 
 ```bash
-# 方式一：强制 HTTP/1.1
-git -c http.version=HTTP/1.1 clone <url>
-
-# 方式二：走 GitHub API 下载 tarball（已验证可用）
-gh api repos/OWNER/REPO/tarball/BRANCH > repo.tar.gz && tar -xzf repo.tar.gz
+./sync.sh                    # 自动选择通道，无需干预
+./push-via-api.sh "提交信息"  # 强制走 API 通道
 ```
 
-若 `git push` 也失败，改用 SSH remote：
+`push-via-api.sh` 的原理：用 GitHub Git Data API 依次构造 blob → tree → commit，
+再更新远端 ref，完全绕开 git 传输层。功能与 `git push` 等价，
+但会丢失本地 commit 对象（远端历史由 API 重建，提交信息保留）。
+
+### 其他绕行方式
 
 ```bash
+# 克隆：强制 HTTP/1.1
+git -c http.version=HTTP/1.1 clone <url>
+
+# 克隆：走 GitHub API 下载 tarball
+gh api repos/OWNER/REPO/tarball/BRANCH > repo.tar.gz && tar -xzf repo.tar.gz
+
+# 改用 SSH remote（需先配置 SSH 密钥）
 git remote set-url origin git@github.com:yusufyian/chemistry-notes.git
+```
+
+### 本地 git 状态同步说明
+
+API 通道推送后，本地 `git log` 与远端 SHA 不一致（对象不在本地）。
+需要恢复一致时：
+
+```bash
+git fetch origin main && git reset --hard origin/main
+```
+
+若 fetch 也被阻断，可直接从 API 拉取：
+
+```bash
+gh api repos/yusufyian/chemistry-notes/commits/main --jq '.sha'
 ```
 
 ## 技术栈
