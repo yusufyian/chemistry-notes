@@ -56,23 +56,29 @@ fi
 git commit -m "$MSG"
 info "已提交: $MSG"
 
-# 5. 推送（代理环境下 git 传输层常被阻断，自动重试）
+# 5. 推送（代理环境下 git 传输层常被阻断，自动降级到 API 通道）
 info "推送到 origin/main ..."
 PUSHED=false
-for attempt in 1 2 3 4 5; do
-  if git push origin main; then
+for attempt in 1 2 3; do
+  if git push origin main 2>/dev/null; then
     PUSHED=true
     break
   fi
-  warn "第 ${attempt} 次推送失败（常见原因：代理阻断 git smart-HTTP），2 秒后重试..."
+  warn "第 ${attempt} 次 git 推送失败，2 秒后重试..."
   sleep 2
 done
 
 if [[ "$PUSHED" != "true" ]]; then
-  error "连续 5 次推送失败。可尝试：
-  1) 检查代理设置
+  warn "git 传输层不可用（常见原因：代理阻断 smart-HTTP），自动切换到 GitHub API 通道"
+  echo ""
+  if ./push-via-api.sh "$MSG"; then
+    PUSHED=true
+  else
+    error "推送失败。可尝试：
+  1) 检查代理设置（git push 与 gh api 走的通道不同）
   2) 改用 SSH：git remote set-url origin git@github.com:yusufyian/chemistry-notes.git
-  3) 手动重试：git push origin main"
+  3) 手动重试：./push-via-api.sh"
+  fi
 fi
 
 info "推送完成。GitHub Actions 正在构建站点，通常 1-2 分钟内上线。"

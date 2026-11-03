@@ -47,3 +47,7 @@ tags:
 ```
 
 远端仓库：[yusufyian/chemistry-notes](https://github.com/yusufyian/chemistry-notes)
+
+### 同步脚本已验证
+
+`./sync.sh` 在 git 传输层被阻断时会自动切换到 API 通道。
