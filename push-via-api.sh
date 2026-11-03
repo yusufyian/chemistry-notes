@@ -175,7 +175,15 @@ info "远端已更新: ${NEW_COMMIT:0:8}"
 # ---------------------------------------------------------------
 # 6. 同步本地 git 状态
 # ---------------------------------------------------------------
-git update-ref "refs/remotes/origin/${BRANCH}" "$NEW_COMMIT" 2>/dev/null || true
+# API 通道创建的 commit 对象不在本地，先把对象取回来，
+# 再把本地 main 指向同一个 commit，保证 git log 与远端一致。
+if git fetch origin "$BRANCH" 2>/dev/null; then
+  git reset --soft "$NEW_COMMIT" 2>/dev/null || true
+  info "本地 git 状态已与远端同步"
+else
+  warn "无法 git fetch（传输层仍被阻断），本地 SHA 与远端暂不一致。"
+  warn "内容已确认一致，可手动恢复：git fetch origin main && git reset --hard origin/main"
+fi
 
 info "完成。GitHub Actions 正在构建站点，通常 1-2 分钟内上线。"
 echo ""
